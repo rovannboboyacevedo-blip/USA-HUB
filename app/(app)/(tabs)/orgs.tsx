@@ -98,6 +98,7 @@ const OrgsScreen = () => {
   };
 
   const handleOpenCreate = () => {
+    setIsCollegeOpen(false);
     setIsCreateOpen(true);
   };
 
@@ -105,11 +106,22 @@ const OrgsScreen = () => {
     setIsCreateOpen(false);
   };
 
+  const handleChangeCreateKind = (kind: 'university' | 'course') => {
+    setSection(kind);
+    setIsCollegeOpen(false);
+  };
+
+  const handleChangeCreateCollege = (nextCollege: College) => {
+    setCollege(nextCollege);
+    setSection('course');
+  };
+
   const handleCreateOrganization = async (input: NewOrganizationInput) => {
     if (!isAdminAccount(session?.user.role)) return;
     await addOrganization(input);
     setSection(input.kind);
     if (input.kind === 'course') setCollege(input.college ?? null);
+    setIsCollegeOpen(false);
     setIsCreateOpen(false);
   };
 
@@ -128,15 +140,17 @@ const OrgsScreen = () => {
         {title}
       </Text>
 
-      <View style={styles.tabs}>
-        <Chip label="University Organizations" selected={section === 'university'} onPress={handleShowUniversity} />
-        <Chip
-          label={college ? `Course Organizations (${college})` : 'Course Organizations'}
-          selected={section === 'course'}
-          onPress={handleToggleCourses}
-        />
+      <View style={[styles.tabs, !layout.isWide && styles.tabsStacked]}>
+        <View style={styles.filters}>
+          <Chip label="University Organizations" selected={section === 'university'} onPress={handleShowUniversity} />
+          <Chip
+            label={college ? `Course Organizations (${college})` : 'Course Organizations'}
+            selected={section === 'course'}
+            onPress={handleToggleCourses}
+          />
+        </View>
         {canAddOrganization ? (
-          <View style={styles.addSlot}>
+          <View style={[styles.addSlot, !layout.isWide && styles.addSlotStacked]}>
             <HubButton label="Add a new organization" onPress={handleOpenCreate} />
           </View>
         ) : null}
@@ -179,8 +193,10 @@ const OrgsScreen = () => {
       {canAddOrganization ? (
         <CreateOrganizationModal
           visible={isCreateOpen}
-          initialKind={section}
-          initialCollege={college}
+          kind={section}
+          college={college}
+          onChangeKind={handleChangeCreateKind}
+          onChangeCollege={handleChangeCreateCollege}
           onClose={handleCloseCreate}
           onCreate={handleCreateOrganization}
         />
@@ -207,8 +223,22 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 20,
   },
+  tabsStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  filters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+  },
   addSlot: {
     marginLeft: 'auto',
+  },
+  addSlotStacked: {
+    marginLeft: 0,
+    alignSelf: 'stretch',
   },
   grid: {
     flexDirection: 'row',

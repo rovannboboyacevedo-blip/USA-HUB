@@ -1,32 +1,49 @@
 import { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Chip, ErrorText, Field, HubButton } from '@/components/chrome';
 import { colors, fonts, shadow } from '@/constants/theme';
 import type { NewOrganizationInput } from '@/services/orgDirectory';
 import { COLLEGES, type College } from '@/types/models';
 
+type OrganizationKind = 'university' | 'course';
+
 type CreateOrganizationModalProps = {
   visible: boolean;
-  initialKind: 'university' | 'course';
-  initialCollege: College | null;
+  kind: OrganizationKind;
+  college: College | null;
+  onChangeKind: (kind: OrganizationKind) => void;
+  onChangeCollege: (college: College) => void;
   onClose: () => void;
   onCreate: (input: NewOrganizationInput) => Promise<void>;
 };
 
 export const CreateOrganizationModal = ({
   visible,
-  initialKind,
-  initialCollege,
+  kind,
+  college,
+  onChangeKind,
+  onChangeCollege,
   onClose,
   onCreate,
 }: CreateOrganizationModalProps) => {
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [bio, setBio] = useState('');
-  const [kind, setKind] = useState<'university' | 'course'>(initialKind);
-  const [college, setCollege] = useState<College | null>(initialCollege);
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -36,23 +53,21 @@ export const CreateOrganizationModal = ({
     setTitle('');
     setCategory('');
     setBio('');
-    setKind(initialKind);
-    setCollege(initialCollege);
     setCoverUri(null);
     setError('');
     setIsSaving(false);
-  }, [visible, initialKind, initialCollege]);
+  }, [visible]);
 
   const handleChooseUniversity = () => {
-    setKind('university');
+    onChangeKind('university');
   };
 
   const handleChooseCourse = () => {
-    setKind('course');
+    onChangeKind('course');
   };
 
   const handleSelectCollege = (nextCollege: College) => {
-    setCollege(nextCollege);
+    onChangeCollege(nextCollege);
   };
 
   const handleUploadCover = async () => {
@@ -119,102 +134,164 @@ export const CreateOrganizationModal = ({
     }
   };
 
+  const listLabel =
+    kind === 'university'
+      ? 'University Organizations'
+      : college
+        ? `Course Organizations (${college})`
+        : 'Course Organizations';
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable accessibilityLabel="Close new organization form" style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => undefined}>
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={styles.screen}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+          ]}
+        >
+          <View style={styles.header}>
             <Text accessibilityRole="header" style={styles.title}>
               Add a new organization
             </Text>
-            <Field
-              label="Organization name"
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Organization name"
-              autoCapitalize="words"
-              tone="plain"
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close new organization form"
+              hitSlop={8}
+              onPress={onClose}
+              style={({ pressed }) => [styles.close, pressed && styles.pressed]}
+            >
+              <FontAwesome6 name="xmark" solid size={16} color={colors.text} />
+            </Pressable>
+          </View>
+
+          <Text style={styles.syncNote}>Shows under {listLabel}</Text>
+
+          <Text style={styles.label}>Organization list</Text>
+          <View style={styles.choices}>
+            <Chip
+              label="University Organizations"
+              selected={kind === 'university'}
+              onPress={handleChooseUniversity}
             />
-            <Field
-              label="Category"
-              value={category}
-              onChangeText={setCategory}
-              placeholder="Category"
-              autoCapitalize="words"
-              tone="plain"
+            <Chip
+              label={college ? `Course Organizations (${college})` : 'Course Organizations'}
+              selected={kind === 'course'}
+              onPress={handleChooseCourse}
             />
-            <Field
-              label="About"
-              value={bio}
-              onChangeText={setBio}
-              placeholder="What this organization does"
-              autoCapitalize="sentences"
-              tone="plain"
-              multiline
-            />
-            <Text style={styles.label}>Organization type</Text>
-            <View style={styles.choices}>
-              <Chip label="University" selected={kind === 'university'} onPress={handleChooseUniversity} />
-              <Chip label="Course" selected={kind === 'course'} onPress={handleChooseCourse} />
-            </View>
-            {kind === 'course' ? (
-              <>
-                <Text style={styles.label}>College</Text>
-                <View style={styles.choices}>
-                  {COLLEGES.map((item) => (
-                    <Chip
-                      key={item}
-                      label={item}
-                      selected={college === item}
-                      onPress={() => handleSelectCollege(item)}
-                    />
-                  ))}
-                </View>
-              </>
-            ) : null}
-            <Text style={styles.label}>Cover</Text>
-            {coverUri ? (
-              <Image accessible={false} source={{ uri: coverUri }} resizeMode="cover" style={styles.cover} />
-            ) : (
-              <View style={styles.coverEmpty}>
-                <Text style={styles.coverEmptyLabel}>No cover yet</Text>
+          </View>
+
+          {kind === 'course' ? (
+            <>
+              <Text style={styles.label}>College</Text>
+              <View style={styles.choices}>
+                {COLLEGES.map((item) => (
+                  <Chip
+                    key={item}
+                    label={item}
+                    selected={college === item}
+                    onPress={() => handleSelectCollege(item)}
+                  />
+                ))}
               </View>
-            )}
-            <ErrorText message={error} />
-            <View style={styles.actions}>
-              <HubButton label={coverUri ? 'Change cover' : 'Upload cover'} onPress={handleUploadCover} />
-              <HubButton label="Cancel" onPress={onClose} disabled={isSaving} />
-              <HubButton label={isSaving ? 'Creating' : 'Create'} onPress={handleCreate} disabled={isSaving} />
+            </>
+          ) : null}
+
+          <Field
+            label="Organization name"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Organization name"
+            autoCapitalize="words"
+            tone="plain"
+          />
+          <Field
+            label="Category"
+            value={category}
+            onChangeText={setCategory}
+            placeholder="Category"
+            autoCapitalize="words"
+            tone="plain"
+          />
+          <Field
+            label="About"
+            value={bio}
+            onChangeText={setBio}
+            placeholder="What this organization does"
+            autoCapitalize="sentences"
+            tone="plain"
+            multiline
+          />
+
+          <Text style={styles.label}>Cover</Text>
+          {coverUri ? (
+            <Image accessible={false} source={{ uri: coverUri }} resizeMode="cover" style={styles.cover} />
+          ) : (
+            <View style={styles.coverEmpty}>
+              <Text style={styles.coverEmptyLabel}>No cover yet</Text>
             </View>
-          </ScrollView>
-        </Pressable>
-      </Pressable>
+          )}
+          <ErrorText message={error} />
+          <View style={styles.actions}>
+            <HubButton label={coverUri ? 'Change cover' : 'Upload cover'} onPress={handleUploadCover} />
+            <HubButton label="Cancel" onPress={onClose} disabled={isSaving} />
+            <HubButton label={isSaving ? 'Creating' : 'Create'} onPress={handleCreate} disabled={isSaving} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
+  screen: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.28)',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 520,
-    maxHeight: '90%',
-    alignSelf: 'center',
     backgroundColor: colors.background,
-    borderRadius: 18,
-    padding: 18,
-    ...shadow.float,
+  },
+  content: {
+    paddingHorizontal: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
   },
   title: {
+    flex: 1,
     fontFamily: fonts.bold,
-    fontSize: 20,
+    fontSize: 22,
     textTransform: 'uppercase',
     color: colors.text,
+  },
+  close: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    ...shadow.float,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  syncNote: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.muted,
+    textTransform: 'none',
     marginBottom: 16,
   },
   label: {
@@ -232,12 +309,12 @@ const styles = StyleSheet.create({
   },
   cover: {
     width: '100%',
-    height: 140,
+    height: 160,
     borderRadius: 16,
     marginBottom: 12,
   },
   coverEmpty: {
-    height: 140,
+    height: 160,
     borderRadius: 16,
     marginBottom: 12,
     alignItems: 'center',

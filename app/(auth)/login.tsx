@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import AuthShell from '@/components/AuthShell';
-import HubLogo from '@/components/HubLogo';
 import { ErrorText, Field, HubButton } from '@/components/chrome';
 import { colors, fonts } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -50,7 +49,12 @@ const LoginScreen = () => {
         <Text accessibilityRole="header" style={styles.wordmark}>
           USA Hub
         </Text>
-        <HubLogo width={120} />
+        <Image
+          accessibilityRole="image"
+          accessibilityLabel="University of San Agustin seal"
+          source={require('../../assets/images/usa-seal.png')}
+          style={styles.seal}
+        />
         <Text style={styles.submark}>Student Organization and Event Hub</Text>
       </View>
 
@@ -133,6 +137,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: colors.text,
+  },
+  seal: {
+    width: 148,
+    height: 155,
+    marginTop: 10,
   },
   submark: {
     marginTop: 6,

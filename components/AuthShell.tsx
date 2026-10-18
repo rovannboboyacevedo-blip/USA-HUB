@@ -15,7 +15,6 @@ const AuthShell = ({ children }: AuthShellProps) => {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.bar, styles.topBar]} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -25,8 +24,8 @@ const AuthShell = ({ children }: AuthShellProps) => {
             styles.content,
             {
               maxWidth: formWidth,
-              paddingTop: insets.top + 64,
-              paddingBottom: insets.bottom + 78,
+              paddingTop: insets.top + 24,
+              paddingBottom: insets.bottom + 24,
             },
           ]}
           keyboardShouldPersistTaps="handled"
@@ -35,7 +34,6 @@ const AuthShell = ({ children }: AuthShellProps) => {
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
-      <View style={[styles.bar, styles.bottomBar]} />
     </View>
   );
 };
@@ -57,19 +55,5 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-  },
-  bar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 45,
-    backgroundColor: colors.yellow,
-    zIndex: 2,
-  },
-  topBar: {
-    top: 0,
-  },
-  bottomBar: {
-    bottom: 0,
   },
 });
