@@ -30,10 +30,19 @@ export default function Root({ children }: { children: ReactNode }) {
 
 const responsiveBackground = `
 body {
-  background-color: #fff;
+  background-color: #FFFFFF;
 }
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #000;
-  }
+button:hover,
+button:focus,
+button:focus-visible,
+input:hover,
+input:focus,
+input:focus-visible,
+textarea:hover,
+textarea:focus,
+textarea:focus-visible,
+[role="button"]:hover,
+[role="button"]:focus,
+[role="button"]:focus-visible {
+  outline: none !important;
 }`;

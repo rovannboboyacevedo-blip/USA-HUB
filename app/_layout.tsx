@@ -1,56 +1,115 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Oswald_400Regular, Oswald_500Medium, Oswald_700Bold } from '@expo-google-fonts/oswald';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { AppDialog } from '@/components/AppDialog';
+import BootScreen from '@/components/BootScreen';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { colors } from '@/constants/theme';
+import { evaluateRouteAccess } from '@/middleware/authMiddleware';
+import { loadEvents } from '@/services/eventDirectory';
+import { loadOrganizations } from '@/services/orgDirectory';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  anchor: '(tabs)',
+  anchor: '(app)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+const RootLayout = () => {
+  const [fontsLoaded, fontError] = useFonts({
+    Oswald_400Regular,
+    Oswald_500Medium,
+    Oswald_700Bold,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (fontError) throw fontError;
+  }, [fontError]);
 
   useEffect(() => {
-    if (loaded) {
+    loadOrganizations();
+    loadEvents();
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded]);
 
-  if (!loaded) {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      button:hover,
+      button:focus,
+      button:focus-visible,
+      input:hover,
+      input:focus,
+      input:focus-visible,
+      textarea:hover,
+      textarea:focus,
+      textarea:focus-visible,
+      [role="button"]:hover,
+      [role="button"]:focus,
+      [role="button"]:focus-visible {
+        outline: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      style.remove();
+    };
+  }, []);
+
+  if (!fontsLoaded) {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
+  return (
+    <AuthProvider>
+      <AppDialog>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </AppDialog>
+    </AuthProvider>
+  );
+};
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+const RootNavigator = () => {
+  const { session, isReady } = useAuth();
+  const appAccess = evaluateRouteAccess('/', session);
+  const authAccess = evaluateRouteAccess('/login', session);
+
+  if (!isReady) {
+    return <BootScreen />;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <Stack.Protected guard={appAccess.status === 'allow'} redirectTo="/login">
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Protected guard={authAccess.status === 'allow'} redirectTo="/">
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
   );
-}
+};
+
+export default RootLayout;
